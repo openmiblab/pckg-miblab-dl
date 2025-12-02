@@ -1,0 +1,27 @@
+# Note on the cluster make sure to load modules that match these versions:
+# module load Anaconda3/2024.02-1
+# module load Python/3.10.8-GCCcore-12.2.0 # essential to load latest GCC
+# module load CUDA/11.8.0 # must macth with version in environment.yml
+
+name: fatwater
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10 # python>3.10 is more risky on HPC
+  - numpy=2.2.6
+  - pandas=2.3.3
+  - pytorch=2.5.1  # limited to 2.8.0 as per instruction on nnUNET website
+  - torchvision=0.20.1
+  - torchaudio=2.5.1
+  - pytorch-cuda=11.8 # no clear reason why this version but it works
+  - pip=25.2
+
+  - pip:
+      - nnunetv2=2.6.2
+      - dbdicom=0.3.14
+      - napari[all]=0.6.6
+      - nibabel=5.3.2

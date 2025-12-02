@@ -1,0 +1,73 @@
+# https://packaging.python.org/en/latest/specifications/pyproject-toml/#pyproject-toml-spec
+
+[build-system]
+build-backend = 'setuptools.build_meta'
+requires = ['setuptools>=61.2']
+
+[project]
+name = "miblab-dl"
+version = "0.0.0"
+dependencies = [
+  'importlib-resources>=1.1.0',
+  'numpy',
+  'nibabel',
+  'nnunetv2',
+]
+# optional information
+description = "Python API for miblab's trained deep-learning models"
+readme = "README.md"
+authors = [
+  { name = "Steven Sourbron", email = "s.sourbron@sheffield.ac.uk" },
+  { name = "Joao Periquito", email = "j.s.periquito@sheffield.ac.uk" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+  # How mature is this project? Common values are
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
+  'Development Status :: 3 - Alpha',
+
+  # Indicate who your project is intended for
+  'Intended Audience :: Developers',
+  'Intended Audience :: Science/Research',
+  'Topic :: Scientific/Engineering',
+  'Operating System :: OS Independent',
+
+  'License :: OSI Approved :: Apache Software License',
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3"
+]
+keywords = [
+  'python', 
+  "medical imaging",  
+  "MRI",
+  "deep learning",
+]
+
+
+[project.urls]
+"Homepage" = "https://miblab.org/"
+"Source Code" = "https://github.com/openmiblab/miblab-dl"
+
+[project.optional-dependencies]
+dev = [
+  'dbdicom',
+  'miblab[data]',
+  'pytest',
+  'pytest-cov',
+  'build',
+  'twine',
+  'autopep8',
+  'pycodestyle',
+]
+
+[tool.setuptools]
+# ...
+# By default, include-package-data is true in pyproject.toml, so you do
+# NOT have to specify this line.
+include-package-data = true
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
