@@ -1,3 +1,3 @@
-from miblab_dl.fatwatermap import fatwater
+from miblab_dl.fatwatermap import fatwater, cleanup
 
 

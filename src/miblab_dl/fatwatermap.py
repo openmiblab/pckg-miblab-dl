@@ -6,18 +6,21 @@ import os
 import sys
 import subprocess
 import tempfile
+import shutil
+from platformdirs import user_cache_dir
+from pathlib import Path
+
 
 import numpy as np
 import nibabel as nib
 from miblab import zenodo_fetch
 
-if sys.version_info < (3, 9):
-    # importlib.resources either doesn't exist or lacks the files()
-    # function, so use the PyPI version:
-    import importlib_resources
-else:
-    # importlib.resources has files(), so use that:
-    import importlib.resources as importlib_resources
+
+
+
+def cleanup():
+    cachedir = Path(user_cache_dir("miblab-dl"))
+    shutil.rmtree(cachedir)
 
 
 def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10):
@@ -32,9 +35,10 @@ def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10):
         fat, water: numpy arrays of the same shape and type as the input arrays.
     """
     print('Downloading model..')
-    
-    temp_dir = importlib_resources.files('miblab_dl.datafiles')
-    model = zenodo_fetch("FatWaterPredictor.zip", temp_dir, "17791059", extract=True)
+
+    cachedir = Path(user_cache_dir("miblab-dl"))
+    cachedir.mkdir(parents=True, exist_ok=True)
+    model = zenodo_fetch("FatWaterPredictor.zip", cachedir, "17791059", extract=True)
     
     print('Predicting fat and water images..')
 
