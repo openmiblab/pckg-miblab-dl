@@ -5,7 +5,6 @@ Compute water-dominance masks from data that have fat and water maps
 import os
 import sys
 import subprocess
-import tempfile
 import shutil
 from platformdirs import user_cache_dir
 from pathlib import Path
@@ -23,26 +22,56 @@ def cleanup():
     shutil.rmtree(cachedir)
 
 
-def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10):
+def _remake_dir(path):
+    path = Path(path)
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True)
+
+
+def _cache_dir(cache=None):
+
+    # 1. User override via environment variable
+    if cache:
+        try:
+            os.makedirs(cache, exist_ok=True)
+        except Exception:
+            # If user has set an invalid/unwritable path, raise an error
+            raise ValueError(
+                f"{cache} is not a valid cache directory for miblab-dl."
+            )
+        else:
+            return cache
+
+    # 2. Fallback to platform-specific user cache (~/.cache/miblab-dl)
+    cache_dir = user_cache_dir("miblab-dl")
+    os.makedirs(cache_dir, exist_ok=True)
+    return cache_dir
+
+
+def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10, cache=None):
     """Compute fat and water maps from opposed-phase and in-phase arrays
 
     Args:
         op_phase (np.ndarray): opposed phase data
         in_phase (np.ndarray): in-phase data
         model (str): path to the model files
+        cache (str, optional): directory to use for storing model weights and temp files
+           This defaults to the standard cache dir location of the operating system.
 
     Returns:
         fat, water: numpy arrays of the same shape and type as the input arrays.
     """
     print('Downloading model..')
 
-    cachedir = Path(user_cache_dir("miblab-dl"))
-    cachedir.mkdir(parents=True, exist_ok=True)
+    # Persistent cache memory for storing model weights avoids the 
+    # need to download every time.
+    cachedir = _cache_dir(cache)
     model = zenodo_fetch("FatWaterPredictor.zip", cachedir, "17791059", extract=True)
     
     print('Predicting fat and water images..')
 
-    waterdom = _predict_mask_numpy(model, op_phase, in_phase)
+    waterdom = _predict_mask_numpy(model, op_phase, in_phase, cachedir)
     fat, water = _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f)
     fat[fat < 0] = 0
     water[water < 0] = 0
@@ -50,31 +79,38 @@ def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10):
 
 
 
-def _predict_mask_numpy(model, op_phase, in_phase):
+def _predict_mask_numpy(model, op_phase, in_phase, cachedir):
     
-    with tempfile.TemporaryDirectory() as input_folder:
+    # Making temporary folders in persistent cache is safer than tempfile on HPC
+    input_folder = os.path.join(cachedir, 'input_folder')
+    output_folder = os.path.join(cachedir, 'output_folder')
+    _remake_dir(input_folder)
+    _remake_dir(output_folder)
 
-        # Save numpy arrays as nifti
-        case_id = "dixon"
-        file_op = os.path.join(input_folder, f"{case_id}_0000.nii.gz")
-        file_ip = os.path.join(input_folder, f"{case_id}_0001.nii.gz")
-        nifti_op = nib.Nifti1Image(op_phase, np.eye(4))
-        nifti_ip = nib.Nifti1Image(in_phase, np.eye(4))
-        nib.save(nifti_op, file_op)
-        nib.save(nifti_ip, file_ip)
+    # Save numpy arrays as nifti
+    case_id = "dixon"
+    file_op = os.path.join(input_folder, f"{case_id}_0000.nii.gz")
+    file_ip = os.path.join(input_folder, f"{case_id}_0001.nii.gz")
+    nifti_op = nib.Nifti1Image(op_phase, np.eye(4))
+    nifti_ip = nib.Nifti1Image(in_phase, np.eye(4))
+    nib.save(nifti_op, file_op)
+    nib.save(nifti_ip, file_ip)
 
-        with tempfile.TemporaryDirectory() as output_folder:
+    # Create predictions in a temporary output_folder
+    _predict_mask_folder(model, input_folder, output_folder, cachedir)
 
-            # Create predictions in a temporary output_folder
-            _predict_mask_folder(model, input_folder, output_folder)
+    # Return result as binary numpy array
+    mask_file = os.path.join(output_folder, f"{case_id}.nii.gz")
+    waterdom = nib.load(mask_file).get_fdata().astype(np.int8)
+    
+    # Clean up temp dirs
+    shutil.rmtree(input_folder)
+    shutil.rmtree(output_folder)  
 
-            # Return result as binary numpy array
-            mask_file = os.path.join(output_folder, f"{case_id}.nii.gz")
-            waterdom = nib.load(mask_file).get_fdata().astype(np.int8)
-            return waterdom
-        
+    return waterdom
 
-def _predict_mask_folder(model, input_folder, output_folder):
+
+def _predict_mask_folder(model, input_folder, output_folder, cachedir):
 
     # These two variables are not used but we are setting to a 
     # dummy value to silence the warnings
@@ -83,68 +119,69 @@ def _predict_mask_folder(model, input_folder, output_folder):
 
     # Folder containing the model weights
     os.environ["nnUNet_results"] = model
+
+    # Making temporary folders in persistent cache
+    predictions = os.path.join(cachedir, 'predictions')
+    _remake_dir(predictions)
     
-    with tempfile.TemporaryDirectory() as predictions:
+    # Predict and save results in the temporary folder
+    cmd = [
+        "nnUNetv2_predict",
+        "-d", "Dataset001_FatWaterPredictor",
+        "-i", input_folder,
+        "-o", predictions,
+        "-f", "0", "1", "2", "3", "4",
+        "-tr", "nnUNetTrainer",
+        "-c", "3d_fullres",
+        "-p", "nnUNetPlans",
+    ]
     
-        # Predict and save results in a temporary folder
-        # cmd = f"nnUNetv2_predict -d Dataset001_FatWaterPredictor -i {input_folder} -o {predictions} -f 0 1 2 3 4 -tr nnUNetTrainer -c 3d_fullres -p nnUNetPlans"
+    process = subprocess.Popen(
+        cmd, 
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.STDOUT, 
+        text=True, 
+        encoding="utf-8",   # <-- force UTF-8 decoding
+        errors="replace"    # <-- avoids crash if weird bytes appear
+    )
 
-        cmd = [
-            "nnUNetv2_predict",
-            "-d", "Dataset001_FatWaterPredictor",
-            "-i", input_folder,
-            "-o", predictions,
-            "-f", "0", "1", "2", "3", "4",
-            "-tr", "nnUNetTrainer",
-            "-c", "3d_fullres",
-            "-p", "nnUNetPlans",
-        ]
-        
-        process = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
-            text=True, 
-            encoding="utf-8",   # <-- force UTF-8 decoding
-            errors="replace"    # <-- avoids crash if weird bytes appear
-        )
+    # Stream logs in real-time
+    for line in process.stdout:
+        print(line, end="")
 
-        # Stream logs in real-time
-        for line in process.stdout:
-            print(line, end="")
+    process.wait()  # wait for completion
+    
+    # Run post-processing
+    os.makedirs(output_folder, exist_ok=True)
+    source = os.path.join(model, 'Dataset001_FatWaterPredictor', 'nnUNetTrainer__nnUNetPlans__3d_fullres', "crossval_results_folds_0_1_2_3_4")
+    pproc = os.path.join(source, 'postprocessing.pkl')
+    plans = os.path.join(source, 'plans.json')
 
-        process.wait()  # wait for completion
-        
-        # Run post-processing
-        os.makedirs(output_folder, exist_ok=True)
-        source = os.path.join(model, 'Dataset001_FatWaterPredictor', 'nnUNetTrainer__nnUNetPlans__3d_fullres', "crossval_results_folds_0_1_2_3_4")
-        pproc = os.path.join(source, 'postprocessing.pkl')
-        plans = os.path.join(source, 'plans.json')
-        # cmd = f"nnUNetv2_apply_postprocessing -i {predictions} -o {output_folder} -pp_pkl_file {pproc} -np 8 -plans_json {plans}"
+    cmd = [
+        "nnUNetv2_apply_postprocessing",
+        "-i", predictions,
+        "-o", output_folder,
+        "-pp_pkl_file", pproc,
+        "-np", "8",
+        "-plans_json", plans,
+    ]
 
-        cmd = [
-            "nnUNetv2_apply_postprocessing",
-            "-i", predictions,
-            "-o", output_folder,
-            "-pp_pkl_file", pproc,
-            "-np", "8",
-            "-plans_json", plans,
-        ]
+    process = subprocess.Popen(
+        cmd, 
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.STDOUT, 
+        text=True, 
+        encoding="utf-8",   # <-- force UTF-8 decoding
+        errors="replace"    # <-- avoids crash if weird bytes appear
+    )
 
-        process = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
-            text=True, 
-            encoding="utf-8",   # <-- force UTF-8 decoding
-            errors="replace"    # <-- avoids crash if weird bytes appear
-        )
+    # Stream logs in real-time
+    for line in process.stdout:
+        print(line, end="")
 
-        # Stream logs in real-time
-        for line in process.stdout:
-            print(line, end="")
+    process.wait()  # wait for completion
 
-        process.wait()  # wait for completion
+    shutil.rmtree(predictions)
 
 
 def _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f):
