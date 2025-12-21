@@ -44,7 +44,12 @@ def clear_cache(cache=None):
 
 
 
-def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10, cache=None):
+def fatwater(
+        op_phase, in_phase, 
+        te_o=None, te_i=None, t2s_w=30, t2s_f=15, 
+        tr=None, fa=None, t1_w=1400, t1_f=350, 
+        cache=None,
+    ):
     """Compute fat and water maps from opposed-phase and in-phase arrays
 
     Args:
@@ -71,7 +76,7 @@ def fatwater(op_phase, in_phase, te_o=None, te_i=None, t2s_w=15, t2s_f=10, cache
 
     # Compute
     waterdom = _predict_mask_numpy(model, op_phase, in_phase, tmp)
-    fat, water = _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f)
+    fat, water = _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f, tr, fa, t1_w, t1_f)
     fat[fat < 0] = 0
     water[water < 0] = 0
     
@@ -136,23 +141,6 @@ def _predict_mask_folder(model, input_folder, output_folder, predictions):
 
     # Folder containing the model weights
     os.environ["nnUNet_results"] = model
-
-    # # Determine conda env bin (if available)
-    # conda_prefix = os.environ.get("CONDA_PREFIX")  # set when env active
-    # conda_bin = os.path.join(conda_prefix, "bin") if conda_prefix else None
-
-    # def find_exec(name):
-    #     # search CONDA_PREFIX/bin first, then PATH
-    #     if conda_bin:
-    #         exe = shutil.which(name, path=conda_bin + os.pathsep + os.environ.get("PATH", ""))
-    #     else:
-    #         exe = shutil.which(name)
-    #     if exe is None:
-    #         raise RuntimeError(f"{name} not found. Activate conda env or install the CLI.")
-    #     return exe
-
-    # nnunet_predict = find_exec("nnUNetv2_predict")
-    # nnunet_post = find_exec("nnUNetv2_apply_postprocessing")
     
     # Predict and save results in the temporary folder
     cmd = [
@@ -217,15 +205,28 @@ def _predict_mask_folder(model, input_folder, output_folder, predictions):
 
 
 
-def _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f):
+def _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f, tr, fa, t1_w, t1_f):
 
-    if te_o is None:
-        Eof, Eif, Eow, Eiw = 1, 1, 1, 1
-    else:
+    Eof, Eif, Eow, Eiw = 1, 1, 1, 1
+
+    if te_o is not None:
+        # Add T2* correction
         Eof = np.exp(-te_o/t2s_f)
         Eif = np.exp(-te_i/t2s_f)
         Eow = np.exp(-te_o/t2s_w)
         Eiw = np.exp(-te_i/t2s_w)
+
+    if tr is not None:
+        # Add T1 correction
+        ef = np.exp(-tr/t1_f)
+        ew = np.exp(-tr/t1_w)
+        cfa = np.cos(np.deg2rad(fa))
+        Af = (1 - ef) / (1 - cfa * ef)
+        Aw = (1 - ew) / (1 - cfa * ew)
+        Eof *= Af
+        Eif *= Af
+        Eow *= Aw
+        Eiw *= Aw
 
     Efatdom = np.array([[Eof, -Eow], [Eif, Eiw]])
     Ewatdom = np.array([[-Eof, Eow], [Eif, Eiw]])
