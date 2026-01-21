@@ -1,3 +1,5 @@
 dbdicom
 pytest
 pytest-cov
+twine
+build
