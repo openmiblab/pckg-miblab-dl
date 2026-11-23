@@ -1,6 +1,3 @@
-import os
-import shutil
-
 import dbdicom as db
 import numpy as np
 import vreg
