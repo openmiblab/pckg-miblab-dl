@@ -33,10 +33,10 @@ def setup_nnunet():
 setup_nnunet()
 
 
-
+from miblab_dl.cache import get_cache_dir, clear_cache
 from miblab_dl.dlseg import totseg
 from miblab_dl.dlsegkidney import kidney_pc_dixon, kidney_pc_dixon_unetr
-from miblab_dl.fatwatermap import fatwater, clear_cache
+from miblab_dl.fatwatermap import fatwater
 
 
 

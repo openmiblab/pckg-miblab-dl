@@ -9,15 +9,12 @@ import miblab_dl as dl
 
 def test_fatwater():
     
-    tmp_dir = os.path.join(os.getcwd(), 'tmp')
-    os.makedirs(tmp_dir, exist_ok=True)
-
+    testdata_dir = dl.get_cache_dir('test_data_pc_dixon')
     testdata = 'test_data_post_contrast_dixon.zip'
     testdatadoi = '15489381'
 
     # Download ZIP file to temp directory
-    folder = fetch(testdata, tmp_dir, testdatadoi, extract=True)
-    # folder = download(testdatadoi, testdata, tmp_dir, extract=True)
+    folder = fetch(testdata, testdata_dir, testdatadoi, extract=True)
 
     # Read DICOM data
     series_op = db.series(folder, contains='out_phase')[0]

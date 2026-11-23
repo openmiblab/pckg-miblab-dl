@@ -4,42 +4,16 @@ Compute water-dominance masks from data that have fat and water maps
 
 import os
 import subprocess
-import shutil
 import tempfile
 
 import torch
 import numpy as np
 import nibabel as nib
 from miblab_data.zenodo import fetch as zenodo_fetch
-from platformdirs import user_cache_dir
 # from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 # from nnunetv2.postprocessing.remove_connected_components import apply_postprocessing_to_folder
 
-
-
-def _cache_dir(cache=None):
-
-    # 1. User override via environment variable
-    if cache:
-        try:
-            os.makedirs(cache, exist_ok=True)
-        except Exception:
-            # If user has set an invalid/unwritable path, raise an error
-            raise ValueError(
-                f"{cache} is not a valid cache directory for miblab-dl."
-            )
-        else:
-            return cache
-
-    # 2. Fallback to platform-specific user cache (~/.cache/miblab-dl)
-    cache_dir = user_cache_dir("miblab-dl")
-    os.makedirs(cache_dir, exist_ok=True)
-    return cache_dir
-
-
-def clear_cache(cache=None):
-    cachedir = _cache_dir(cache)
-    shutil.rmtree(cachedir)
+from miblab_dl.cache import get_cache_dir
 
 
 
@@ -47,7 +21,6 @@ def fatwater(
         op_phase, in_phase, 
         te_o=None, te_i=None, t2s_w=30, t2s_f=15, 
         tr=None, fa=None, t1_w=1400, t1_f=350, 
-        cache=None,
     ):
     """Compute fat and water maps from opposed-phase and in-phase arrays
 
@@ -55,8 +28,6 @@ def fatwater(
         op_phase (np.ndarray): opposed phase data
         in_phase (np.ndarray): in-phase data
         model (str): path to the model files
-        cache (str, optional): directory to use for storing model weights and temp files
-           This defaults to the standard cache dir location of the operating system.
 
     Returns:
         fat, water: numpy arrays of the same shape and type as the input arrays.
@@ -65,22 +36,19 @@ def fatwater(
 
     # Persistent cache memory for storing model weights avoids the 
     # need to download every time.
-    cachedir = _cache_dir(cache)
+    cachedir = get_cache_dir()
     model = zenodo_fetch("FatWaterPredictor.zip", cachedir, "17791059", extract=True)
     
     print('Predicting fat and water images..')
 
     # Making temporary folders in persistent cache is safer on HPC
-    tmp = tempfile.mkdtemp(prefix="tmp_", dir=cachedir)
-
-    # Compute
-    waterdom = _predict_mask_numpy(model, op_phase, in_phase, tmp)
-    fat, water = _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f, tr, fa, t1_w, t1_f)
-    fat[fat < 0] = 0
-    water[water < 0] = 0
+    with tempfile.TemporaryDirectory(prefix="tmp_", dir=cachedir) as tmp:
+        # Compute
+        waterdom = _predict_mask_numpy(model, op_phase, in_phase, tmp)
+        fat, water = _compute_fatwater(waterdom, op_phase, in_phase, te_o, te_i, t2s_w, t2s_f, tr, fa, t1_w, t1_f)
+        fat[fat < 0] = 0
+        water[water < 0] = 0
     
-    # Clean up temp dirs
-    shutil.rmtree(tmp)
     return fat, water
 
 
@@ -113,22 +81,6 @@ def _predict_mask_numpy(model, op_phase, in_phase, tmp):
 
     return waterdom
 
-
-# def __predict_mask_folder(model, input_folder, predictions):
-
-#     # TOD: consider API for numpy arrays to avoid read and write to temp folders
-
-#     # Initialize predictor
-#     plans_dir = os.path.join(
-#         model, "Dataset001_FatWaterPredictor",
-#         "nnUNetTrainer__nnUNetPlans__3d_fullres"
-#     )
-#     predictor = nnUNetPredictor()
-#     predictor.initialize_from_trained_model_folder(plans_dir, None)
-#     predictor.predict_from_files(input_folder, predictions)
-
-#     # Skip the postprocessing - not managed to get this to work 
-#     # yet in the python API but should be fixable.
 
 
 def _predict_mask_folder(model, input_folder, output_folder, predictions, device=None):

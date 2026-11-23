@@ -1,5 +1,4 @@
 import os
-import shutil
 import tempfile
 
 from tqdm import tqdm
@@ -9,35 +8,35 @@ import vreg
 from totalsegmentator import map_to_binary
 from totalsegmentator.python_api import totalsegmentator
 
+from miblab_dl.cache import get_cache_dir
+
 
 def _totseg(vol, cutoff=None, task='total', roi_subset=None, **kwargs):
 
-    temp_dir = tempfile.mkdtemp()
+    # Creating tmp files in persistent cache is safer on HPC
+    with tempfile.TemporaryDirectory(prefix="tmp_", dir=get_cache_dir()) as temp_dir:
+        print('Saving source as nifti..')
+        nifti_file = os.path.join(temp_dir, 'source.nii.gz')
+        vreg.write_nifti(vol, nifti_file)
 
-    print('Saving source as nifti..')
-    nifti_file = os.path.join(temp_dir, 'source.nii.gz')
-    vreg.write_nifti(vol, nifti_file)
+        print('Segmenting organs..')
+        totalsegmentator(nifti_file,  temp_dir, task=task, roi_subset=roi_subset, **kwargs)
 
-    print('Segmenting organs..')
-    totalsegmentator(nifti_file,  temp_dir, task=task, roi_subset=roi_subset, **kwargs)
+        if roi_subset is None:
+            roi_set = list(map_to_binary.class_map[task].values())
+        else:
+            roi_set = roi_subset
 
-    if roi_subset is None:
-        roi_set = list(map_to_binary.class_map[task].values())
-    else:
-        roi_set = roi_subset
-
-    mask = {}
-    for roi in tqdm(roi_set, desc='Reading results..'):
-        roifile = os.path.join(temp_dir, roi + '.nii.gz')
-        v = vreg.read_nifti(roifile)
-        if cutoff is not None:
-            values = v.values
-            values[values > cutoff] = 1
-            values[values <= cutoff] = 0
-            v.set_values(values)
-        mask[roi] = v
-    
-    shutil.rmtree(temp_dir) 
+        mask = {}
+        for roi in tqdm(roi_set, desc='Reading results..'):
+            roifile = os.path.join(temp_dir, roi + '.nii.gz')
+            v = vreg.read_nifti(roifile)
+            if cutoff is not None:
+                values = v.values
+                values[values > cutoff] = 1
+                values[values <= cutoff] = 0
+                v.set_values(values)
+            mask[roi] = v
 
     return mask
 

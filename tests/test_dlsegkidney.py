@@ -5,21 +5,18 @@ import dbdicom as db
 import numpy as np
 import vreg
 
-from miblab_dl import kidney_pc_dixon, kidney_pc_dixon_unetr
+from miblab_dl import kidney_pc_dixon, kidney_pc_dixon_unetr, get_cache_dir
 from miblab_data.zenodo import fetch as zenodo_fetch
 
 
-
 def test_kidney_pc_dixon():
-    
-    tmp_dir = os.path.join(os.getcwd(), 'tmp')
-    os.makedirs(tmp_dir, exist_ok=True)
 
+    testdata_dir = get_cache_dir('test_data_pc_dixon')
     testdata = 'test_data_post_contrast_dixon.zip'
     testdatadoi = '15489381'
 
     # Download ZIP file to temp directory
-    folder = zenodo_fetch(testdata, tmp_dir, testdatadoi, extract=True)
+    folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
 
     # Read DICOM data
     study = db.studies(folder)[0]
@@ -35,19 +32,15 @@ def test_kidney_pc_dixon():
     mask = kidney_pc_dixon(array, verbose=True)
     assert np.sum(mask==1) == 79285
 
-    shutil.rmtree(tmp_dir)
-
 
 def test_kidney_pc_dixon_unetr():
     
-    tmp_dir = os.path.join(os.getcwd(), 'tmp')
-    os.makedirs(tmp_dir, exist_ok=True)
-
+    testdata_dir = get_cache_dir('test_data_pc_dixon')
     testdata = 'test_data_post_contrast_dixon.zip'
     testdatadoi = '15489381'
 
     # Download ZIP file to temp directory
-    folder = zenodo_fetch(testdata, tmp_dir, testdatadoi, extract=True)
+    folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
 
     # Read DICOM data
     study = db.studies(folder)[0]
@@ -64,12 +57,10 @@ def test_kidney_pc_dixon_unetr():
     mask = kidney_pc_dixon_unetr(vreg.volume(array, vol.affine), verbose=True)
     assert np.sum(mask.values==1) == 73871
 
-    shutil.rmtree(tmp_dir)
-
 
 if __name__=='__main__':
 
-    # test_kidney_pc_dixon()
-    test_kidney_pc_dixon_unetr()
+    test_kidney_pc_dixon()
+    #test_kidney_pc_dixon_unetr()
 
     print('kidney_pc_dixon passed all tests..')

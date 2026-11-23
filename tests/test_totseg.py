@@ -4,22 +4,19 @@ import shutil
 import numpy as np
 import dbdicom as db
 
-from miblab_dl import totseg
+from miblab_dl import totseg, get_cache_dir
 from miblab_data.zenodo import fetch as zenodo_fetch
 
 
 
 def test_totseg():
     
-    tmp_dir = os.path.join(os.getcwd(), 'tmp')
-    os.makedirs(tmp_dir, exist_ok=True)
-
+    testdata_dir = get_cache_dir('test_data_pc_dixon')
     testdata = 'test_data_post_contrast_dixon.zip'
     testdatadoi = '15489381'
 
     # Download ZIP file to temp directory
-    folder = zenodo_fetch(testdata, tmp_dir, testdatadoi, extract=True)
-    folder = os.path.join(tmp_dir, 'test_data_post_contrast_dixon')
+    folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
 
     # Read DICOM data
     # To segment on all volumes:
@@ -37,8 +34,6 @@ def test_totseg():
         fastest=True,
     )
     assert float(np.sum(mask.values==1)) == 71003
-
-    shutil.rmtree(tmp_dir)
 
 
 if __name__=='__main__':

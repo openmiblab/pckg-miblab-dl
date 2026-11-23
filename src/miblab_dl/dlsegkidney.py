@@ -14,16 +14,8 @@ from monai.networks.nets.unetr import UNETR
 from monai.inferers import sliding_window_inference
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 
-
-
-if sys.version_info < (3, 9):
-    # importlib.resources either doesn't exist or lacks the files()
-    # function, so use the PyPI version:
-    import importlib_resources
-else:
-    # importlib.resources has files(), so use that:
-    import importlib.resources as importlib_resources
-
+from miblab_dl.cache import get_cache_dir
+from miblab_dl.cache import clear_cache as clear_cache_function
 
 
 
@@ -102,7 +94,7 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
     if verbose:
         print('(Down)loading model..')
 
-    weights_dir = importlib_resources.files('miblab_dl.datafiles')
+    weights_dir = get_cache_dir('kidney_pc_dixon_unetr')
     weights_path = zenodo_fetch(MODEL, weights_dir, MODEL_DOI)
 
     if verbose:
@@ -150,7 +142,6 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
             f"Unexpected: {result.unexpected_keys}"
         )
     
-
     model.eval() 
 
     with torch.no_grad():
@@ -188,7 +179,7 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
     if clear_cache:
         if verbose:
             print('Deleting downloaded files...')
-        clear_cache_datafiles(weights_dir)
+        clear_cache_function('kidney_pc_dixon_unetr')
 
     return vreg.volume(kidneys, input_vol.affine) 
 
@@ -227,9 +218,9 @@ def kidney_pc_dixon(input_array, device=None, postproc=True, clear_cache = False
     MODEL_DOI = "15328218"
 
     if verbose:
-        print('(Down)loading model..')
+        print('Downloading model..')
 
-    weights_dir = importlib_resources.files('miblab_dl.datafiles')
+    weights_dir = get_cache_dir('kidney_pc_dixon')
     weights_path = zenodo_fetch(MODEL, weights_dir, MODEL_DOI, extract=True)
 
     if verbose:
@@ -265,7 +256,7 @@ def kidney_pc_dixon(input_array, device=None, postproc=True, clear_cache = False
         checkpoint_name='checkpoint_best.pth'
     )
 
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory(prefix='tmp_', dir=get_cache_dir()) as temp_dir:
 
         # Generate temp folder for intermediate data
         temp_folder_results = os.path.join(temp_dir,"temp_results")
@@ -307,7 +298,7 @@ def kidney_pc_dixon(input_array, device=None, postproc=True, clear_cache = False
     if clear_cache:
         if verbose:
             print('Deleting downloaded files...')
-        clear_cache_datafiles(temp_dir)
+        clear_cache_function('kidney_pc_dixon')
 
     return kidneys  
 
