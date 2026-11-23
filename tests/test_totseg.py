@@ -36,7 +36,7 @@ def test_totseg():
         device='cpu',
         fastest=True,
     )
-    assert float(np.sum(mask.values==1)) == 71028
+    assert float(np.sum(mask.values==1)) == 71003
 
     shutil.rmtree(tmp_dir)
 

@@ -102,7 +102,7 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
     if verbose:
         print('(Down)loading model..')
 
-    weights_dir = importlib_resources.files('miblab.datafiles')
+    weights_dir = importlib_resources.files('miblab_dl.datafiles')
     weights_path = zenodo_fetch(MODEL, weights_dir, MODEL_DOI)
 
     if verbose:
@@ -137,7 +137,20 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
 
     # Load model weights
     weights = torch.load(weights_path, map_location=device, weights_only=True)
-    model.load_state_dict(weights)
+    #model.load_state_dict(weights)
+
+    result = model.load_state_dict(weights, strict=False)
+
+    # The model was trained in MONAI 1.3.2. These lines added for compatibility with MONAI 1.6.2
+    # Tolerate only the unused cross-attention norms added in newer MONAI versions
+    missing = [k for k in result.missing_keys if "norm_cross_attn" not in k]
+    if missing or result.unexpected_keys:
+        raise RuntimeError(
+            f"Unexpected mismatch loading weights. Missing: {missing}, "
+            f"Unexpected: {result.unexpected_keys}"
+        )
+    
+
     model.eval() 
 
     with torch.no_grad():
@@ -216,7 +229,7 @@ def kidney_pc_dixon(input_array, device=None, postproc=True, clear_cache = False
     if verbose:
         print('(Down)loading model..')
 
-    weights_dir = importlib_resources.files('miblab.datafiles')
+    weights_dir = importlib_resources.files('miblab_dl.datafiles')
     weights_path = zenodo_fetch(MODEL, weights_dir, MODEL_DOI, extract=True)
 
     if verbose:

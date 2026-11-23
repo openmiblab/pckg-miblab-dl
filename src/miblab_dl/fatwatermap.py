@@ -7,6 +7,7 @@ import subprocess
 import shutil
 import tempfile
 
+import torch
 import numpy as np
 import nibabel as nib
 from miblab_data.zenodo import fetch as zenodo_fetch
@@ -130,7 +131,7 @@ def _predict_mask_numpy(model, op_phase, in_phase, tmp):
 #     # yet in the python API but should be fixable.
 
 
-def _predict_mask_folder(model, input_folder, output_folder, predictions):
+def _predict_mask_folder(model, input_folder, output_folder, predictions, device=None):
 
     # These two variables are not used but we are setting to a 
     # dummy value to silence the warnings
@@ -139,6 +140,9 @@ def _predict_mask_folder(model, input_folder, output_folder, predictions):
 
     # Folder containing the model weights
     os.environ["nnUNet_results"] = model
+
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     
     # Predict and save results in the temporary folder
     cmd = [
@@ -150,6 +154,7 @@ def _predict_mask_folder(model, input_folder, output_folder, predictions):
         "-tr", "nnUNetTrainer",
         "-c", "3d_fullres",
         "-p", "nnUNetPlans",
+        "-device", device,
     ]
     
     process = subprocess.Popen(

@@ -31,10 +31,6 @@ def test_kidney_pc_dixon():
     ]
     arrays = [db.pixel_data(study + [s]) for s in series]
     array = np.stack(arrays, axis=-1)
-    vol = db.volume(study + [series[0]])
-
-    mask = kidney_pc_dixon_unetr(vreg.volume(array, vol.affine), verbose=True)
-    assert np.sum(mask.values==1) == 73871
 
     mask = kidney_pc_dixon(array, verbose=True)
     assert np.sum(mask==1) == 79285
@@ -42,6 +38,38 @@ def test_kidney_pc_dixon():
     shutil.rmtree(tmp_dir)
 
 
+def test_kidney_pc_dixon_unetr():
+    
+    tmp_dir = os.path.join(os.getcwd(), 'tmp')
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    testdata = 'test_data_post_contrast_dixon.zip'
+    testdatadoi = '15489381'
+
+    # Download ZIP file to temp directory
+    folder = zenodo_fetch(testdata, tmp_dir, testdatadoi, extract=True)
+
+    # Read DICOM data
+    study = db.studies(folder)[0]
+    series = [
+        'Dixon_post_contrast_out_phase', 
+        'Dixon_post_contrast_in_phase', 
+        'Dixon_post_contrast_water',
+        'Dixon_post_contrast_fat',
+    ]
+    arrays = [db.pixel_data(study + [s]) for s in series]
+    array = np.stack(arrays, axis=-1)
+    vol = db.volume(study + [series[0]])
+
+    mask = kidney_pc_dixon_unetr(vreg.volume(array, vol.affine), verbose=True)
+    assert np.sum(mask.values==1) == 73871
+
+    shutil.rmtree(tmp_dir)
+
+
 if __name__=='__main__':
-    test_kidney_pc_dixon()
+
+    # test_kidney_pc_dixon()
+    test_kidney_pc_dixon_unetr()
+
     print('kidney_pc_dixon passed all tests..')
