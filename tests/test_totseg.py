@@ -1,22 +1,13 @@
-import os
-import shutil
-
 import numpy as np
 import dbdicom as db
 
-from miblab_dl import totseg, get_cache_dir
-from miblab_data.zenodo import fetch as zenodo_fetch
+import miblab_dl as dl
+from miblab_dl import totseg
 
 
 
 def test_totseg():
-    
-    testdata_dir = get_cache_dir('test_data_pc_dixon')
-    testdata = 'test_data_post_contrast_dixon.zip'
-    testdatadoi = '15489381'
-
-    # Download ZIP file to temp directory
-    folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
+    folder = dl.fetch('Dixon')
 
     # Read DICOM data
     # To segment on all volumes:

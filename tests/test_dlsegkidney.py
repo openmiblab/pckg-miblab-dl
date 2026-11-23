@@ -2,18 +2,13 @@ import dbdicom as db
 import numpy as np
 import vreg
 
-from miblab_dl import kidney_pc_dixon, kidney_pc_dixon_unetr, get_cache_dir
-from miblab_data.zenodo import fetch as zenodo_fetch
+import miblab_dl as dl
+from miblab_dl import kidney_pc_dixon, kidney_pc_dixon_unetr
 
 
 def test_kidney_pc_dixon():
-
-    testdata_dir = get_cache_dir('test_data_pc_dixon')
-    testdata = 'test_data_post_contrast_dixon.zip'
-    testdatadoi = '15489381'
-
     # Download ZIP file to temp directory
-    folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
+    folder = dl.fetch('Dixon')
 
     # Read DICOM data
     study = db.studies(folder)[0]
@@ -31,13 +26,7 @@ def test_kidney_pc_dixon():
 
 
 def test_kidney_pc_dixon_unetr():
-    
-    testdata_dir = get_cache_dir('test_data_pc_dixon')
-    testdata = 'test_data_post_contrast_dixon.zip'
-    testdatadoi = '15489381'
-
-    # Download ZIP file to temp directory
-    folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
+    folder = dl.fetch('Dixon')
 
     # Read DICOM data
     study = db.studies(folder)[0]

@@ -1,20 +1,12 @@
-import os
-
 import dbdicom as db
 import numpy as np
 
-from miblab_data.zenodo import fetch
 import miblab_dl as dl
 
 
 def test_fatwater():
-    
-    testdata_dir = dl.get_cache_dir('test_data_pc_dixon')
-    testdata = 'test_data_post_contrast_dixon.zip'
-    testdatadoi = '15489381'
-
     # Download ZIP file to temp directory
-    folder = fetch(testdata, testdata_dir, testdatadoi, extract=True)
+    folder = dl.fetch('Dixon')
 
     # Read DICOM data
     series_op = db.series(folder, contains='out_phase')[0]
