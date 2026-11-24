@@ -10,7 +10,7 @@ def fetch(dataset='Dixon'):
         testdata = 'test_data_post_contrast_dixon.zip'
         testdatadoi = '15489381'
 
-        # Download ZIP file to temp directory
+        # Download ZIP file to cache directory
         folder = zenodo_fetch(testdata, testdata_dir, testdatadoi, extract=True)
 
         return folder
