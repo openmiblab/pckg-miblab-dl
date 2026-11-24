@@ -3,50 +3,45 @@ import numpy as np
 import vreg
 
 import miblab_dl as dl
-from miblab_dl import kidney_pc_dixon, kidney_pc_dixon_unetr
+from miblab_dl import kidney_dixon, kidney_dixon_unetr
 
 
-def test_kidney_pc_dixon():
+def test_kidney_dixon():
     # Download ZIP file to temp directory
     folder = dl.fetch('Dixon')
 
-    # Read DICOM data
-    study = db.studies(folder)[0]
-    series = [
-        'Dixon_post_contrast_out_phase', 
-        'Dixon_post_contrast_in_phase', 
-        'Dixon_post_contrast_water',
-        'Dixon_post_contrast_fat',
-    ]
-    arrays = [db.pixel_data(study + [s]) for s in series]
-    array = np.stack(arrays, axis=-1)
+    # Read DICOM data in the correct order. 
+    desc = ['out_phase', 'in_phase', 'water', 'fat']
+    dicom_series = [db.series(folder, contains=d)[0] for d in desc]
+    volumes = [db.volume(series, verbose=0) for series in dicom_series]
 
-    mask = kidney_pc_dixon(array, verbose=True)
+    # Convert to a 4D input array and read spacing
+    array = np.stack([v.values for v in volumes], axis=-1)
+
+    mask = kidney_dixon(array, verbose=True)
     assert np.sum(mask==1) == 79285
 
 
-def test_kidney_pc_dixon_unetr():
+def test_kidney_dixon_unetr():
+    # Download ZIP file to temp directory
     folder = dl.fetch('Dixon')
 
-    # Read DICOM data
-    study = db.studies(folder)[0]
-    series = [
-        'Dixon_post_contrast_out_phase', 
-        'Dixon_post_contrast_in_phase', 
-        'Dixon_post_contrast_water',
-        'Dixon_post_contrast_fat',
-    ]
-    arrays = [db.pixel_data(study + [s]) for s in series]
-    array = np.stack(arrays, axis=-1)
-    vol = db.volume(study + [series[0]])
+    # Read DICOM data in the correct order. 
+    desc = ['out_phase', 'in_phase', 'water', 'fat']
+    dicom_series = [db.series(folder, contains=d)[0] for d in desc]
+    volumes = [db.volume(series, verbose=0) for series in dicom_series]
 
-    mask = kidney_pc_dixon_unetr(vreg.volume(array, vol.affine), verbose=True)
+    # Convert to a 4D input array and create 4D volume
+    array = np.stack([v.values for v in volumes], axis=-1)
+    dixon_vol = vreg.volume(array, volumes[0].affine)
+
+    mask = kidney_dixon_unetr(dixon_vol, verbose=True)
     assert np.sum(mask.values==1) == 73871
 
 
 if __name__=='__main__':
 
-    test_kidney_pc_dixon()
-    #test_kidney_pc_dixon_unetr()
+    test_kidney_dixon()
+    #test_kidney_dixon_unetr()
 
-    print('kidney_pc_dixon passed all tests..')
+    print('kidney_dixon passed all tests..')

@@ -3,7 +3,7 @@ import platformdirs
 import shutil
 
 # Define standard user cache directory for dcmri
-CACHE_DIR = Path(platformdirs.user_cache_dir(appname="miblab_dl"))
+CACHE_DIR = Path(platformdirs.user_cache_dir(appname="miblab-dl"))
 
 
 def get_cache_dir(dir=None) -> Path:

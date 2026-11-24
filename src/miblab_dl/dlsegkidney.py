@@ -18,7 +18,7 @@ from miblab_dl.cache import clear_cache as clear_cache_function
 
 
 
-def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, clear_cache = False, verbose=False):
+def kidney_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, clear_cache = False, verbose=False):
 
     """
     Segment individual kidneys on post-contrast Dixon images.
@@ -93,7 +93,7 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
     if verbose:
         print('(Down)loading model..')
 
-    weights_dir = get_cache_dir('kidney_pc_dixon_unetr')
+    weights_dir = get_cache_dir('kidney_dixon_unetr')
     weights_path = zenodo_fetch(MODEL, weights_dir, MODEL_DOI)
 
     if verbose:
@@ -178,7 +178,7 @@ def kidney_pc_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, cl
     if clear_cache:
         if verbose:
             print('Deleting downloaded files...')
-        clear_cache_function('kidney_pc_dixon_unetr')
+        clear_cache_function('kidney_dixon_unetr')
 
     return vreg.volume(kidneys, input_vol.affine) 
 
@@ -193,7 +193,7 @@ def _load_predictor(device=None, verbose=False):
     if verbose:
         print('Downloading model..')
 
-    weights_dir = get_cache_dir('kidney_pc_dixon')
+    weights_dir = get_cache_dir('kidney_dixon')
     weights_path = zenodo_fetch(_MODEL, weights_dir, _MODEL_DOI, extract=True)
 
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -207,7 +207,7 @@ def _load_predictor(device=None, verbose=False):
         tile_step_size=0.75,
         use_gaussian=True,
         use_mirroring=False,
-        perform_everything_on_device=(device.type == "cuda"),
+        perform_everything_on_device=(device_str == "cuda"),
         device=device,
         verbose=False,
         verbose_preprocessing=False,
@@ -239,17 +239,7 @@ def _to_nnunet(input_array, spacing):
     return data, {'spacing': tuple(spacing[::-1])}
 
 
-def _label_kidneys(output_array, postproc):
-    """Convert raw nnU-Net labels to a label image (left=1, right=2)."""
-    if postproc:
-        left_kidney, right_kidney = _kidney_masks(output_array)
-    else:
-        left_kidney = (output_array == 2).astype(np.int16)
-        right_kidney = (output_array == 1).astype(np.int16)
-    return (left_kidney + 2*right_kidney).astype(np.int16)
-
-
-def kidney_pc_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None, postproc=True,
+def kidney_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None, postproc=True,
                     clear_cache=False, verbose=False):
     """Segment individual kidneys on post-contrast Dixon images.
 
@@ -297,12 +287,12 @@ def kidney_pc_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None, postproc=
     if clear_cache:
         if verbose:
             print('Deleting downloaded files...')
-        clear_cache_function('kidney_pc_dixon')
+        clear_cache_function('kidney_dixon')
 
     return kidneys
 
 
-def kidney_pc_dixon_batch(input_folder, output_folder, device=None, postproc=True,
+def kidney_dixon_batch(input_folder, output_folder, device=None, postproc=True,
                           clear_cache=False, verbose=False,
                           num_processes_preprocessing=3, num_processes_export=3):
     """Segment individual kidneys on post-contrast Dixon images, for many cases on disk.
@@ -315,7 +305,7 @@ def kidney_pc_dixon_batch(input_folder, output_folder, device=None, postproc=Tru
 
     Preprocessing and export of the results run in parallel worker processes
     while the network predicts, so this is much faster than calling
-    :func:`kidney_pc_dixon` in a loop. On Windows, call it from a script
+    :func:`kidney_dixon` in a loop. On Windows, call it from a script
     inside an ``if __name__ == "__main__":`` block.
 
     Args:
@@ -371,7 +361,7 @@ def kidney_pc_dixon_batch(input_folder, output_folder, device=None, postproc=Tru
     if clear_cache:
         if verbose:
             print('Deleting downloaded files...')
-        clear_cache_function('kidney_pc_dixon')
+        clear_cache_function('kidney_dixon')
 
 
 def _label_kidneys(output_array, postproc):
@@ -382,126 +372,6 @@ def _label_kidneys(output_array, postproc):
         left_kidney = (output_array == 2).astype(np.int16)
         right_kidney = (output_array == 1).astype(np.int16)
     return (left_kidney + 2*right_kidney).astype(np.int16)
-
-
-# OLD version - functioning but obsolete
-def __old_kidney_pc_dixon(input_array, device=None, postproc=True, clear_cache = False, verbose=False):
-
-    """
-    Segment individual kidneys on post-contrast Dixon images.
-
-    This requires 4-channel input data with out-phase images, 
-    in-phase images, water maps, and fat maps.
-
-    Args:
-        input_array (numpy.ndarray): A 4D numpy array of shape 
-            [x, y, z, contrast] representing the input medical image 
-            volume. The last index must contain out-phase, in-phase, 
-            water and fat images, in that order.
-        device (str):
-            processor on which to deply the computation. If this is not 
-            provided, this defaults to "cuda" (if this is available) and 
-            "cpu" otherwise.
-        postproc (bool): If True, applies post-processing to select 
-            the largest connected component from the UNETR output 
-            for each kidney mask
-        clear_cache: If True, the downloaded pth file is removed 
-            again after running the inference.
-        verbose (bool): If True, prints logging messages.
-
-    Returns:
-        numpy.ndarray: 
-            Label image (left kidney=1, right kidney=2)
-
-    """
-  
-    MODEL = 'nnunet_kidneys_v2.zip'
-    MODEL_DOI = "15328218"
-
-    if verbose:
-        print('Downloading model..')
-
-    weights_dir = get_cache_dir('kidney_pc_dixon')
-    weights_path = zenodo_fetch(MODEL, weights_dir, MODEL_DOI, extract=True)
-
-    if verbose:
-        print('Applying model to data..')
-
-    # Setup device
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    if device is None:
-        device_str = "cuda" if torch.cuda.is_available() else "cpu"
-    else:
-        device_str = device
-    device = torch.device(device_str)
-
-    # Setup device
-    predictor = nnUNetPredictor(
-        tile_step_size=0.75,
-        use_gaussian=True,
-        use_mirroring=False,
-        perform_everything_on_device=True,
-        device=device,
-        verbose=False,
-        verbose_preprocessing=False,
-        allow_tqdm=True
-    )
-
-    # direct to "nnUNetTrainer__nnUNetPlans__3d_fullres"
-    nested_folder = os.path.join(weights_path, "nnUNetTrainer__nnUNetPlans__3d_fullres")
-
-    # Setup the predictor
-    predictor.initialize_from_trained_model_folder(
-        nested_folder,
-        use_folds='all',
-        checkpoint_name='checkpoint_best.pth'
-    )
-
-    with tempfile.TemporaryDirectory(prefix='tmp_', dir=get_cache_dir()) as temp_dir:
-
-        # Generate temp folder for intermediate data
-        temp_folder_results = os.path.join(temp_dir,"temp_results")
-        temp_folder_data_to_test = os.path.join(temp_dir,"temp_results",'data_to_test')
-        os.makedirs(temp_folder_data_to_test, exist_ok=True)
-
-        # Save arrays as nifti (.nii)
-        affine = np.eye(4)
-        nii_out_ph = nib.Nifti1Image(input_array[...,0], affine)
-        nib.save(nii_out_ph, os.path.join(temp_folder_data_to_test, 'Dixon_999_0000.nii.gz'))
-        nii_in_ph = nib.Nifti1Image(input_array[...,1], affine)
-        nib.save(nii_in_ph, os.path.join(temp_folder_data_to_test, 'Dixon_999_0001.nii.gz'))
-        nii_water = nib.Nifti1Image(input_array[...,2], affine)
-        nib.save(nii_water, os.path.join(temp_folder_data_to_test, 'Dixon_999_0002.nii.gz'))
-        nii_fat = nib.Nifti1Image(input_array[...,3], affine)
-        nib.save(nii_fat, os.path.join(temp_folder_data_to_test, 'Dixon_999_0003.nii.gz'))
-
-        # Infer kidney masks
-        predictor.predict_from_files(
-            temp_folder_data_to_test,
-            temp_folder_results, 
-            save_probabilities=False, 
-            overwrite=True
-        )
-
-        # Load the NIfTI file
-        nifti_file = nib.load(os.path.join(temp_folder_results,'Dixon_999.nii.gz'))
-        output_array = nifti_file.get_fdata()
-    
-    if postproc == True:
-        left_kidney, right_kidney = _kidney_masks(output_array)
-    else:
-        left_kidney=output_array[output_array == 2]
-        left_kidney[left_kidney==2]=1
-        right_kidney=output_array[output_array == 1]
-
-    kidneys = (left_kidney + 2*right_kidney).astype(np.int16)
-
-    if clear_cache:
-        if verbose:
-            print('Deleting downloaded files...')
-        clear_cache_function('kidney_pc_dixon')
-
-    return kidneys  
 
 
 def _largest_cluster(array:np.ndarray)->np.ndarray:
