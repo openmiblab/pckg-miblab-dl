@@ -42,9 +42,4 @@ from miblab_dl.rsfseg import rsf_dixon, rsf_dixon_batch
 from miblab_dl.fatwatermap import fatwater
 from miblab_dl.fetch_data import fetch
 from miblab_dl.preproc_rsf import rsf_candidates
-
-
-
-
-
-
+from miblab_dl.data_loader import load_dixon_case, load_dixon_case_as_batch
