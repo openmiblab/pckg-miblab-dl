@@ -41,6 +41,7 @@ from miblab_dl.kidney_compartments_dixon import kidney_compartments_dixon, kidne
 from miblab_dl.rsfseg import rsf_dixon, rsf_dixon_batch
 from miblab_dl.fatwatermap import fatwater
 from miblab_dl.fetch_data import fetch
+from miblab_dl.preproc_rsf import rsf_candidates
 
 
 

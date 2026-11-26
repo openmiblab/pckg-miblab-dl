@@ -15,11 +15,11 @@ def test_kidney_dixon():
     dicom_series = [db.series(folder, contains=d)[0] for d in desc]
     volumes = [db.volume(series, verbose=0) for series in dicom_series]
 
-    # Convert to a 4D input array and read spacing
-    array = np.stack([v.values for v in volumes], axis=-1)
+    # Convert to a 4D input array
+    dixon_array = np.stack([v.values for v in volumes], axis=-1)
 
-    mask = kidney_dixon(array, verbose=True)
-    assert np.sum(mask==1) == 70753
+    kidney_labels = kidney_dixon(dixon_array, verbose=True)
+    assert np.sum(kidney_labels==1) == 70753
 
 
 
