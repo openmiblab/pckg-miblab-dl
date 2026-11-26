@@ -6,7 +6,7 @@ from miblab_dl import get_cache_dir
 def fetch(dataset='Dixon'):
 
     if dataset=='Dixon':
-        testdata_dir = get_cache_dir('test_data_pc_dixon')
+        testdata_dir = get_cache_dir('test_data_dixon')
         testdata = 'test_data_post_contrast_dixon.zip'
         testdatadoi = '15489381'
 

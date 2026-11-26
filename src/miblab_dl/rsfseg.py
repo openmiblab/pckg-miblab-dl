@@ -13,7 +13,6 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 
 from miblab_data.zenodo import fetch as zenodo_fetch
 from miblab_dl.cache import get_cache_dir
-from miblab_dl.cache import clear_cache as clear_cache_function
 
 
 
@@ -155,7 +154,7 @@ def _load_predictor(device=None, verbose=False):
         tile_step_size=0.5,
         use_gaussian=True,
         use_mirroring=False,
-        perform_everything_on_device=(device_str == "cuda"),
+        perform_everything_on_device=(device.type == "cuda"),
         device=device,
         verbose=False,
         verbose_preprocessing=False,
@@ -191,7 +190,7 @@ def _to_nnunet(input_array, spacing):
 
 
 def rsf_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
-                    clear_cache=False, verbose=False):
+                    verbose=False):
     """Segment individual kidneys on post-contrast Dixon images.
 
     This requires 4-channel input data with out-phase images,
@@ -213,8 +212,6 @@ def rsf_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
             otherwise.
         postproc (bool, optional): If True, select the largest connected
             component for each kidney mask. Defaults to True.
-        clear_cache (bool, optional): If True, remove the downloaded
-            model weights after the run. Defaults to False.
         verbose (bool, optional): If True, print logging messages.
             Defaults to False.
 
@@ -237,16 +234,11 @@ def rsf_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
     # Back to (x, y, z)
     kidneys = np.transpose(segmentation, (2, 1, 0))
 
-    if clear_cache:
-        if verbose:
-            print('Deleting downloaded files...')
-        clear_cache_function('rsf_dixon')
-
     return kidneys
 
 
 def rsf_dixon_batch(input_folder, output_folder, device=None,
-                          clear_cache=False, verbose=False,
+                          verbose=False,
                           num_processes_preprocessing=3, num_processes_export=3):
     """Segment individual kidneys on post-contrast Dixon images, for many cases on disk.
 
@@ -270,8 +262,6 @@ def rsf_dixon_batch(input_folder, output_folder, device=None,
             name are overwritten.
         device (str, optional): Processor on which to run the computation.
             Defaults to "cuda" if available and "cpu" otherwise.
-        clear_cache (bool, optional): If True, remove the downloaded model
-            weights after the run. Defaults to False.
         verbose (bool, optional): If True, print logging messages.
             Defaults to False.
         num_processes_preprocessing (int, optional): Number of worker
@@ -283,6 +273,9 @@ def rsf_dixon_batch(input_folder, output_folder, device=None,
         FileNotFoundError: If the input folder does not exist.
         ValueError: If the input folder contains no ``*_0000.nii.gz`` files.
     """
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
+
     input_folder = _add_fat_fraction_to_batch(input_folder)
 
     predictor = _load_predictor(device, verbose)
@@ -315,8 +308,3 @@ def rsf_dixon_batch(input_folder, output_folder, device=None,
             out = nib.Nifti1Image(labels, nii.affine, nii.header)
             out.set_data_dtype(np.int16)
             nib.save(out, output_folder / result.name)
-
-    if clear_cache:
-        if verbose:
-            print('Deleting downloaded files...')
-        clear_cache_function('rsf_dixon')
