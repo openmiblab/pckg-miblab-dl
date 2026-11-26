@@ -16,7 +16,7 @@ from miblab_dl.cache import get_cache_dir
 def kidney_dixon_unetr(input_vol, device=None, overlap=0.3, postproc=True, verbose=False):
 
     """
-    Segment individual kidneys on post-contrast Dixon images.
+    Segment individual kidneys on Dixon images.
 
     This requires 4-channel input data with out-phase images, 
     in-phase images, water maps, and fat maps.

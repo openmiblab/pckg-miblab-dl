@@ -10,8 +10,7 @@ from miblab_dl.rsfseg import rsf_dixon, rsf_dixon_batch
 
 def kidney_compartments_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
                     verbose=False):
-    """Segment individual kidney compartments (parenchyma and rsf) on 
-    post-contrast Dixon images.
+    """Segment individual kidney compartments (parenchyma and rsf) on Dixon images.
 
     This requires 4-channel input data with out-phase images,
     in-phase images, water maps, and fat maps.

@@ -74,7 +74,7 @@ def _to_nnunet(input_array, spacing):
 
 def kidney_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
                     verbose=False):
-    """Segment individual kidneys on post-contrast Dixon images.
+    """Segment individual kidneys on Dixon images.
 
     This requires 4-channel input data with out-phase images,
     in-phase images, water maps, and fat maps.
@@ -148,7 +148,7 @@ def _swap_fat_water(src):
 def kidney_dixon_batch(input_folder, output_folder, device=None,
                           verbose=False,
                           num_processes_preprocessing=3, num_processes_export=3):
-    """Segment individual kidneys on post-contrast Dixon images, for many cases on disk.
+    """Segment individual kidneys on Dixon images, for many cases on disk.
 
     The input folder holds one set of four NIfTI files per case, named
     ``<case>_0000.nii.gz`` (out-phase), ``<case>_0001.nii.gz`` (in-phase),
