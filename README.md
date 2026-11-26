@@ -2,6 +2,8 @@
 
 Python API for miblab's trained deep-learning models
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18004810.svg)](https://doi.org/10.5281/zenodo.18004810)
+
 ## Installation in a working environment
 
 If you are working in an existing environment with pytorch already installed, 
