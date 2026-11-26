@@ -17,7 +17,7 @@ def test_rsf_candidates():
     dixon_array = np.stack([v.values for v in volumes], axis=-1)
 
     # Compute kidney labels
-    kidneys = dl.kidney_dixon(dixon_array, verbose=True)
+    kidneys = dl.kidney_dixon(dixon_array, volumes[0].spacing, verbose=True)
 
     # Compute rsf_candidates
     water, fat = dixon_array[..., 2], dixon_array[..., 3]

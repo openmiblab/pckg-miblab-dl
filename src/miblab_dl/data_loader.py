@@ -65,9 +65,6 @@ def load_dixon_case_as_batch(case='Dixon'):
     batch_folder = get_cache_dir('Dixon_batch')
     for i, volume in enumerate(volumes):
         nifti_file = batch_folder / f'{case}_{i:04d}.nii.gz'
-        # for now: save with the incorrect affine
-        # When new model is implemented, check that this works correctly
-        v = vreg.volume(volume.values, np.eye(4))
-        vreg.write_nifti(v, nifti_file)
+        vreg.write_nifti(volume, nifti_file)
 
     return batch_folder

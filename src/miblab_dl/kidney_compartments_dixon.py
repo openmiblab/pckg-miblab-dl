@@ -8,8 +8,7 @@ from miblab_dl.kidney_dixon_nnunet import kidney_dixon, kidney_dixon_batch
 from miblab_dl.rsfseg import rsf_dixon, rsf_dixon_batch
 
 
-def kidney_compartments_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
-                    verbose=False):
+def kidney_compartments_dixon(input_array, spacing, device=None, verbose=False):
     """Segment individual kidney compartments (parenchyma and rsf) on Dixon images.
 
     This requires 4-channel input data with out-phase images,
@@ -20,10 +19,10 @@ def kidney_compartments_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
             [x, y, z, contrast] representing the input medical image
             volume. The last index must contain out-phase, in-phase,
             water and fat images, in that order.
-        spacing (sequence of float, optional): Voxel size in mm along
+        spacing (sequence of float): Voxel size in mm along
             the x, y and z axes of `input_array`. The model resamples
             the data to its own target spacing, so a wrong value
-            gives wrong results. Defaults to (1.0, 1.0, 1.0).
+            gives wrong results. 
         device (str, optional): Processor on which to run the
             computation. Defaults to "cuda" if available and "cpu"
             otherwise.

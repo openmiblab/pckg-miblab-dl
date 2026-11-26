@@ -18,7 +18,7 @@ def test_kidney_dixon():
     # Convert to a 4D input array
     dixon_array = np.stack([v.values for v in volumes], axis=-1)
 
-    kidney_labels = kidney_dixon(dixon_array, verbose=True)
+    kidney_labels = kidney_dixon(dixon_array, volumes[0].spacing, verbose=True)
     assert np.sum(kidney_labels==1) == 70753
 
 

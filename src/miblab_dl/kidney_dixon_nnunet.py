@@ -72,8 +72,7 @@ def _to_nnunet(input_array, spacing):
     return data, {'spacing': tuple(spacing[::-1])}
 
 
-def kidney_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
-                    verbose=False):
+def kidney_dixon(input_array, spacing, device=None, verbose=False):
     """Segment individual kidneys on Dixon images.
 
     This requires 4-channel input data with out-phase images,
@@ -84,10 +83,10 @@ def kidney_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
             [x, y, z, contrast] representing the input medical image
             volume. The last index must contain out-phase, in-phase,
             water and fat images, in that order.
-        spacing (sequence of float, optional): Voxel size in mm along
+        spacing (sequence of float): Voxel size in mm along
             the x, y and z axes of `input_array`. The model resamples
             the data to its own target spacing, so a wrong value
-            gives wrong results. Defaults to (1.0, 1.0, 1.0).
+            gives wrong results. 
         device (str, optional): Processor on which to run the
             computation. Defaults to "cuda" if available and "cpu"
             otherwise.
@@ -103,6 +102,11 @@ def kidney_dixon(input_array, spacing=(1.0, 1.0, 1.0), device=None,
     Raises:
         ValueError: If `input_array` or `spacing` has the wrong shape.
     """
+    # The current model is trained with data incorrectly saved with spacing (1, 1, 1).
+    # In order to correct the error, the spacing must be set to this value at 
+    # inference as well. TODO: Retrain and remove this
+    spacing = (1.0, 1.0, 1.0)
+
     # Model is trained with out-phase, in-phase, fat and water, 
     # But the package convention uses water and fat, so needs to be swapped.
     out = input_array.copy()
@@ -140,6 +144,22 @@ def _swap_fat_water(src):
             continue
         ch = swap.get(m["ch"], m["ch"])
         shutil.copy2(f, dst / f"{m['case']}_{ch}.nii.gz")
+
+    return dst
+
+
+def _set_affine(src: str | Path, affine: np.ndarray) -> Path:
+    src_path = Path(src)
+    dst = src_path.parent / f"{src_path.name}_isotropic"
+    dst.mkdir(parents=True, exist_ok=True)
+
+    for file_path in src_path.iterdir():
+        if file_path.is_file() and (
+            file_path.name.endswith(".nii") or file_path.name.endswith(".nii.gz")
+        ):
+            vol = vreg.read_nifti(file_path)
+            new_vol = vreg.volume(vol.values, affine)
+            vreg.write_nifti(new_vol, dst / file_path.name)
 
     return dst
 
@@ -182,8 +202,12 @@ def kidney_dixon_batch(input_folder, output_folder, device=None,
     output_folder = Path(output_folder)
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    input_folder = _swap_fat_water(input_folder)
+    # The current model is trained with data incorrectly saved with spacing (1, 1, 1).
+    # In order to correct the error, the spacing must be set to this value at 
+    # inference as well. TODO: Retrain and remove this
+    input_folder_affine = _set_affine(input_folder, np.eye(4))
 
+    input_folder_swap = _swap_fat_water(input_folder_affine)
     predictor = _load_predictor(device, verbose)
 
     if verbose:
@@ -195,7 +219,7 @@ def kidney_dixon_batch(input_folder, output_folder, device=None,
 
         # nnU-Net only accepts plain strings as folder arguments
         predictor.predict_from_files(
-            str(input_folder),
+            str(input_folder_swap),
             temp_dir,
             save_probabilities=False,
             overwrite=True,
@@ -211,6 +235,10 @@ def kidney_dixon_batch(input_folder, output_folder, device=None,
             out = nib.Nifti1Image(labels, nii.affine, nii.header)
             out.set_data_dtype(np.int16)
             nib.save(out, output_folder / result.name)
+
+    # Remove temporary
+    shutil.rmtree(input_folder_affine)
+    shutil.rmtree(input_folder_swap)
 
 
 def _label_kidneys(output_array):
