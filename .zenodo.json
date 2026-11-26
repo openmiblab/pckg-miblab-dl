@@ -1,0 +1,39 @@
+{
+  "title": "Python API for miblab's Trained Deep-Learning Models",
+  "upload_type": "software",
+  "description": "<p>This Python package serves as an API to deploy deep-learning models trained by <a href=\"https://miblab.org\">miblab.org</a>.</p><ul><li><b>Documentation:</b> <a href=\"https://openmiblab.github.io/docs-miblab-dl\">openmiblab.github.io/docs-miblab-dl</a></li><li><b>Source code:</b> <a href=\"https://github.com/openmiblab/pckg-miblab-dl\">GitHub repository</a></li></ul>",
+  "creators": [
+    {
+      "name": "Periquito, Joao",
+      "affiliation": "University of Sheffield"
+    },
+    {
+      "name": "Thomas, Ajo",
+      "affiliation": "University of Sheffield"
+    },
+    {
+      "name": "Ariens, Bente",
+      "affiliation": "University of Sheffield"
+    },
+    {
+      "name": "Sourbron, Steven",
+      "affiliation": "University of Sheffield"
+    }
+  ],
+  "keywords": ["kidney", "biomarkers", "MRI"],
+  "license": "Apache-2.0",
+  "version": "v0.0.16",
+  "publication_date": "2026-11-26",
+  "related_identifiers": [
+    {
+      "relation": "isSupplementTo",
+      "identifier": "https://github.com/openmiblab/pckg-miblab-dl"
+    }
+  ],
+  "url": "https://miblab.org",
+  "communities": [
+    {
+      "identifier": "miblab"
+    }
+  ]
+}
