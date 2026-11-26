@@ -35,7 +35,9 @@ setup_nnunet()
 
 from miblab_dl.cache import get_cache_dir, clear_cache
 from miblab_dl.dlseg import totseg
-from miblab_dl.dlsegkidney import kidney_dixon, kidney_dixon_batch, kidney_dixon_unetr
+from miblab_dl.kidney_dixon_unetr import kidney_dixon_unetr
+from miblab_dl.kidney_dixon_nnunet import kidney_dixon, kidney_dixon_batch
+from miblab_dl.kidney_compartments_dixon import kidney_compartments_dixon, kidney_compartments_dixon_batch
 from miblab_dl.rsfseg import rsf_dixon, rsf_dixon_batch
 from miblab_dl.fatwatermap import fatwater
 from miblab_dl.fetch_data import fetch
