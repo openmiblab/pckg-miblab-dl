@@ -16,12 +16,13 @@ def load_dixon_case(case='Dixon'):
             Defaults to 'Dixon'.
 
     Returns:
-        tuple: A tuple (array, spacing) where
+        tuple: A tuple (array, spacing, affine) where
 
         - **array** (np.ndarray): 4D array of shape (x, y, z, 4) with the
           channels stacked along the last axis.
         - **spacing**: Voxel spacing of the volumes, taken from the
           out-phase volume and assumed to be identical for all channels.
+        - **affine**: Affine array in LPS+ coordinates (DICOM, ITK)
     """
     folder = fetch(case)
 
@@ -33,8 +34,9 @@ def load_dixon_case(case='Dixon'):
     # Convert to a 4D input array and read spacing
     array = np.stack([v.values for v in volumes], axis=-1)
     spacing = volumes[0].spacing
+    affine = volumes[0].affine
 
-    return array, spacing
+    return array, spacing, affine
 
 def load_dixon_case_as_batch(case='Dixon'):
     """Write the Dixon test case as NIfTI files for kidney_dixon_batch.

@@ -5,13 +5,13 @@ import numpy as np
 import nibabel as nib
 
 from miblab_dl.kidney_dixon_nnunet import kidney_dixon, kidney_dixon_batch
-from miblab_dl.rsfseg import rsf_dixon, rsf_dixon_batch
+from miblab_dl.rsf_dixon import rsf_dixon, rsf_dixon_batch
 
 
 def kidney_compartments_dixon(input_array, spacing, device=None, verbose=False):
-    """Segment individual kidney compartments (parenchyma and rsf) on Dixon images.
+    """Segment individual kidney compartments (parenchyma and rsf) on coronal Dixon images.
 
-    This requires 4-channel input data with out-phase images,
+    This requires 4-channel coronal input data with out-phase images,
     in-phase images, water maps, and fat maps.
 
     Args:
@@ -93,7 +93,7 @@ def _combine_labels(dir_a, dir_b, dir_out=None, dtype=np.uint8):
 def kidney_compartments_dixon_batch(input_folder, output_folder, device=None,
                           verbose=False,
                           num_processes_preprocessing=3, num_processes_export=3):
-    """Segment individual kidney compartments (parenchyma and rsf) on Dixon images, for many cases on disk.
+    """Segment individual kidney compartments (parenchyma and rsf) on coronal Dixon images, for many cases on disk.
 
     The input folder holds one set of four NIfTI files per case, named
     ``<case>_0000.nii.gz`` (out-phase), ``<case>_0001.nii.gz`` (in-phase),

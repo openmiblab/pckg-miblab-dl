@@ -7,24 +7,16 @@ from miblab_dl import totseg
 
 
 def test_totseg():
+    # Download ZIP file to temp directory
     folder = dl.fetch('Dixon')
 
-    # Read DICOM data
-    # To segment on all volumes:
-    # vols = [db.volume(s) for s in db.series(folder)]
-    # To segment on a single volume:
-    study = db.studies(folder)[0]
-    vols = db.volume(study + ['Dixon_post_contrast_water'])
+    # Read DICOM data in the correct order. 
+    dicom_series = db.series(folder, contains='out_phase')[0]
+    volume = db.volume(dicom_series, verbose=0)
 
-    # Segment using TotalSegmentator
-    mask = totseg(
-        vols, 
-        task='total_mr', 
-        roi_subset=['kidney_left', 'kidney_right'], 
-        device='cpu',
-        fastest=True,
-    )
-    assert float(np.sum(mask.values==1)) == 71003
+    label_img = totseg(volume.values, affine=volume.affine, task='total_mr')
+    
+    assert np.sum(label_img) == 79556255
 
 
 if __name__=='__main__':

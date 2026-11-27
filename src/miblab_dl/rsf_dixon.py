@@ -190,9 +190,9 @@ def _to_nnunet(input_array, spacing):
 
 
 def rsf_dixon(input_array, spacing, device=None, verbose=False):
-    """Segment renal sinus fat on Dixon images.
+    """Segment renal sinus fat on coronal Dixon images.
 
-    This requires 4-channel input data with out-phase images,
+    This requires 4-channel coronal input data with out-phase images,
     in-phase images, water maps, and fat maps. 
     The function downloads the model weights from a 
     `Zenodo repository <https://zenodo.org/records/24515900>`_. 
@@ -221,11 +221,6 @@ def rsf_dixon(input_array, spacing, device=None, verbose=False):
     Raises:
         ValueError: If `input_array` or `spacing` has the wrong shape.
     """
-    # The current model is trained with data incorrectly saved with spacing (1, 1, 1).
-    # In order to correct the error, the spacing must be set to this value at 
-    # inference as well. TODO: Retrain and remove this
-    spacing = (1.0, 1.0, 1.0)
-
     input_array = _add_fat_fraction(input_array)
     data, properties = _to_nnunet(input_array, spacing)
     predictor = _load_predictor(device, verbose)
@@ -240,26 +235,11 @@ def rsf_dixon(input_array, spacing, device=None, verbose=False):
 
     return kidneys
 
-def _set_affine(src: str | Path, affine: np.ndarray) -> Path:
-    src_path = Path(src)
-    dst = src_path.parent / f"{src_path.name}_isotropic"
-    dst.mkdir(parents=True, exist_ok=True)
-
-    for file_path in src_path.iterdir():
-        if file_path.is_file() and (
-            file_path.name.endswith(".nii") or file_path.name.endswith(".nii.gz")
-        ):
-            vol = vreg.read_nifti(file_path)
-            new_vol = vreg.volume(vol.values, affine)
-            vreg.write_nifti(new_vol, dst / file_path.name)
-
-    return dst
-
 
 def rsf_dixon_batch(input_folder, output_folder, device=None,
                           verbose=False,
                           num_processes_preprocessing=3, num_processes_export=3):
-    """Segment renal sinus fat on Dixon images, for many cases on disk.
+    """Segment renal sinus fat on coronal Dixon images, for many cases on disk.
 
     The input folder holds one set of four NIfTI files per case, named
     ``<case>_0000.nii.gz`` (out-phase), ``<case>_0001.nii.gz`` (in-phase),
@@ -295,13 +275,7 @@ def rsf_dixon_batch(input_folder, output_folder, device=None,
     output_folder = Path(output_folder)
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    # The current model is trained with data incorrectly saved with spacing (1, 1, 1).
-    # In order to correct the error, the spacing must be set to this value at 
-    # inference as well. TODO: Retrain and remove this
-    input_folder_affine = _set_affine(input_folder, np.eye(4))
-
-    input_folder_affine = _add_fat_fraction_to_batch(input_folder_affine)
-
+    input_folder_ff = _add_fat_fraction_to_batch(input_folder)
     predictor = _load_predictor(device, verbose)
 
     if verbose:
@@ -313,7 +287,7 @@ def rsf_dixon_batch(input_folder, output_folder, device=None,
 
         # nnU-Net only accepts plain strings as folder arguments
         predictor.predict_from_files(
-            str(input_folder_affine),
+            str(input_folder_ff),
             temp_dir,
             save_probabilities=False,
             overwrite=True,
@@ -332,3 +306,7 @@ def rsf_dixon_batch(input_folder, output_folder, device=None,
             out = nib.Nifti1Image(labels, nii.affine, nii.header)
             out.set_data_dtype(np.int16)
             nib.save(out, output_folder / result.name)
+
+    # Remove computed database
+    if input_folder_ff != input_folder:
+        shutil.rmtree(input_folder_ff)
